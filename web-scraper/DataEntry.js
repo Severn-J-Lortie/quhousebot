@@ -16,5 +16,14 @@ class DataEntry
     this.houseType = houseDescriptor.houseType;
     this.sourceName = houseDescriptor.sourceName;
   }
+
+  /**
+   * Create a copy of this dataEntry to send to Firestore
+   * @returns {object} An object representing this class
+   */
+  toObject()
+  {
+    return structuredClone(this);
+  }
 }
 module.exports.DataEntry = DataEntry;

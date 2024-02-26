@@ -2,22 +2,20 @@ const { WebDataSource } = require('../WebDataSource');
 const { DataEntry } = require('../DataEntry');
 const config = require('../config');
 const { calculatePerPersonPrice } = require('../utils');
-const fs = require('node:fs');
 class LimestoneProperty extends WebDataSource
 {
   constructor()
   {
     const lpConfig = config.dataSources.limestoneProperty;
-    super(lpConfig.url, lpConfig.numBedrooms, "Limestone");
+    super(lpConfig.url, "Limestone");
     this.lpConfig = lpConfig;
   }
   async getData()
   {
-    console.log('--- Frontenac ---');
-    console.log('Fetching latest entries...');
     const dataEntries = [];
-    for (const bedroomCount of this.numBedrooms)
+    for (let i = 0; i < config.maxBedrooms; i++)
     {
+      const bedroomCount = i + 1;
       const responseText = await fetch(this.url, {
         headers: this.lpConfig.headers,
         body: `{\"collectionName\":\"Properties\",\"dataQuery\":{\"filter\":{\"$and\":[{\"$and\":[{\"type\":{\"$eq\":2}}]},{\"bedrooms\":${bedroomCount}},{\"availableYes\":true}]},\"sort\":[{\"fieldName\":\"availableYes\",\"order\":\"DESC\"},{\"fieldName\":\"available\",\"order\":\"ASC\"},{\"fieldName\":\"rate\",\"order\":\"ASC\"},{\"fieldName\":\"_updatedDate\",\"order\":\"DESC\"}],\"paging\":{\"offset\":0,\"limit\":12},\"fields\":[]},\"options\":{},\"includeReferencedItems\":[\"location\",\"status1\",\"propertyType\"],\"segment\":\"LIVE\",\"appId\":\"4dc3111e-2454-408a-be40-c5eda295fb8a\"}`,
@@ -39,7 +37,6 @@ class LimestoneProperty extends WebDataSource
         dataEntries.push(dataEntry);
       }
     }
-    console.log(`Found ${dataEntries.length} candidates`);
     return dataEntries;
   }
 }

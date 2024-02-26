@@ -9,17 +9,16 @@ class AxonProperty extends WebDataSource
   constructor()
   {
     const apConfig = config.dataSources.axonProperty;
-    super(apConfig.url, apConfig.numBedrooms, "Axon");
+    super(apConfig.url, "Axon");
     this.apConfig = apConfig;
     this.selectors = apConfig.selectors;
   }
   async getData()
   {
-    console.log('--- Axon ---');
-    console.log('Fetching newest listings...');
     const dataEntries = [];
-    for (const bedroomCount of this.numBedrooms)
+    for (let i = 0; i < config.maxBedrooms; i++)
     {
+      const bedroomCount = i + 1;
       const listings = await fetch(this.url, {
         "headers": {
           "cache-control": "no-cache",
@@ -55,7 +54,6 @@ class AxonProperty extends WebDataSource
         dataEntries.push(dataEntry);
       }
     }
-    console.log(`Found ${dataEntries.length} candidates`);
     return dataEntries;
   }
 }

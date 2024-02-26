@@ -3,22 +3,20 @@ const { DataEntry } = require('../DataEntry');
 const config = require('../config');
 const { JSDOM } = require('jsdom');
 const { calculatePerPersonPrice } = require('../utils');
-const fs = require('node:fs');
 class QueensAccomodationListingService extends WebDataSource
 {
   constructor()
   {
     const quConfig = config.dataSources.queensAccommodationListingService;
-    super(quConfig.url, quConfig.numBedrooms, "Queen's Accomodation Listing Service");
+    super(quConfig.url, "Queen's Accomodation Listing Service");
     this.quConfig = quConfig;
   }
   async getData()
   {
-    console.log('--- Queen\'s Accomodation Listing Service ---');
-    console.log('Fetching entries....');
     const dataEntries = [];
-    for (const bedroomCount of this.numBedrooms)
+    for (let i = 0; i < config.maxBedrooms; i++)
     {
+      const bedroomCount = i + 1;
       const housingListFilteredResponse = await fetch(`${this.url}&number_of_rooms=${bedroomCount}`);
       const housingListFiltered = (await housingListFilteredResponse.json())[0];
       if (housingListFiltered.includes(this.quConfig.noResultsReturnedText))
@@ -56,7 +54,6 @@ class QueensAccomodationListingService extends WebDataSource
         dataEntries.push(dataEntry);
       }
     }
-    console.log(`Found ${dataEntries.length} candidates`);
     return dataEntries;
   }
 }

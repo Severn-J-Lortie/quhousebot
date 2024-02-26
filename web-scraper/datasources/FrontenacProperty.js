@@ -8,16 +8,15 @@ class FrontenacProperty extends WebDataSource
 {
   constructor()
   {
-    super(config.dataSources.frontenacProperty.url, config.dataSources.frontenacProperty.numBedrooms, "Frontenac");
+    super(config.dataSources.frontenacProperty.url, "Frontenac");
     this.selectors = config.dataSources.frontenacProperty.selectors;
   }
   async getData()
   {
-    console.log('--- Frontenac ---');
-    console.log('Fetching latest listings....');
     const dataEntries = [];
-    for (const bedroomCount of this.numBedrooms)
+    for (let i = 0; i < config.maxBedrooms; i++)
     {
+      const bedroomCount = i + 1;
       const listings = await fetch(this.url, {
         "headers": {
           "accept": "application/json, text/javascript, */*; q=0.01",
@@ -55,17 +54,18 @@ class FrontenacProperty extends WebDataSource
         if (pricePerBed.includes('$'))
           pricePerBed = pricePerBed.substring(1);
         pricePerBed = calculatePerPersonPrice(bedroomCount, Number(pricePerBed));
+        const numBathrooms = Number(houseCard.querySelector(this.selectors.cardBathrooms).innerHTML);
         dataEntries.push(new DataEntry({
           address,
           link,
           pricePerBed,
           leaseStart,
           numBedrooms: bedroomCount,
+          numBathrooms: numBathrooms,
           sourceName: this.name
         }));
       }
     }
-    console.log(`Found ${dataEntries.length} candidates`);
     return dataEntries;
   }
 }

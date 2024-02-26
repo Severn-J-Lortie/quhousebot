@@ -1,8 +1,8 @@
 module.exports = {
-  updateInterval: 15 * 60 * 1000, // 15 minutes
+  updateInterval: 1 * 60 * 1000, // 15 minutes
   dryRun: false,
   minBedroomPrice: 500,
-  maxBedrooms: 7,
+  maxBedrooms: 1,
   dataSources: {
     frontenacProperty: {
       selectors:
@@ -11,6 +11,7 @@ module.exports = {
         cardAddress: 'article > h4 > a',
         cardLink: 'article > h4 > a',
         cardPricePerBed: 'article > div.listing-footer > div.footer-right.pull-right > span > b',
+        cardBathrooms: 'article > div.listing-footer > div.footer-left.pull-left > span:nth-child(2) > b'
       },
       url: 'https://www.frontenacproperty.com/wp-admin/admin-ajax.php'
     },

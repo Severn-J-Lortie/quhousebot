@@ -7,18 +7,18 @@ class DatasourceUpdater
    * Create a new DatasourceUpdater instance
    * @param {object[]} datasources List of Datasources to pull from
    */
-  constructor(datasources)
+  constructor(datasources, firestore)
   {
-    this.datasources = this.datasources;
-    this.firestore = new Firestore();
+    this.datasources = datasources;
+    this.firestore = firestore;
   }
 
   /**
-   * Initialize the DatasourceUpdater
+   * Begin running update very config.updateInterval milliseconds
    */
-  init() {
-    this.firestore.init();
-    setInterval(this.updateLoop, config.updateInterval);
+  startLoop() {
+    setInterval(() => this.updateLoop(), config.updateInterval);
+    console.log(`Starting update loop with interval of ${config.updateInterval / 1000 / 60 } min`);
   }
 
   /**
@@ -27,13 +27,14 @@ class DatasourceUpdater
    */
   async pullFromDatasources()
   {
-    const dataEntries = [];
+    let dataEntries = [];
     for (const datasource of this.datasources)
     {
       console.log(` --- Fetching ${datasource.name} --- `)
       try {
         const newDataEntries = await datasource.getData();
         console.log(`Got ${newDataEntries.length} listings`);
+        dataEntries = dataEntries.concat(newDataEntries);
       }
       catch (error)
       {
@@ -48,13 +49,29 @@ class DatasourceUpdater
    */
   async updateLoop()
   {
-    const unwrapToString = (value) => value ? value : '';
     const newDataEntries = await this.pullFromDatasources();
+    let writtenCount = 0;
+    let cachedCount = 0;
+    let alreadyUploadedCount = 0;
     for (const dataEntry of newDataEntries)
     {
-      const hashString = unwrapToString(dataEntry.address) + unwrapToString(dataEntry.pricePerBed) + unwrapToString(dataEntry.numBedrooms);
-      const hash = computeSHA256Hash(hashString);
-      this.firestore.writeIfNotExist(hash, dataEntry);
+      const result = await this.firestore.writeIfNotExist(dataEntry);
+      if (result.written)
+      {
+        writtenCount++;
+      }
+      else
+      {
+        if (result.reason === 'CACHE')
+          cachedCount++;
+        else if (result.reason === 'FIRESTORE')
+          alreadyUploadedCount++;
+      }
     }
+    console.log(`
+${writtenCount} entries written to Firestore. 
+${cachedCount} rejected due to in-memory cache, ${alreadyUploadedCount} were already in Firestore.
+    `);
   }
 }
+exports.DatasourceUpdater = DatasourceUpdater;

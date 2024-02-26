@@ -3,22 +3,19 @@ const { DataEntry } = require('../DataEntry');
 const config = require('../config');
 const jsdom = require('jsdom');
 const { calculatePerPersonPrice } = require('../utils');
-const fs = require('node:fs');
 class PanadewProperty extends WebDataSource
 {
   constructor()
   {
     const pnConfig = config.dataSources.panadewProperty;
-    super(pnConfig.url, pnConfig.numBedrooms, "Panadew");
+    super(pnConfig.url, "Panadew");
     this.pnConfig = pnConfig;
     this.selectors = pnConfig.selectors;
   }
   async getData()
   {
-    console.log('--- Panadew ---');
-    console.log('Fetching newest listings...');
     const dataEntries = [];
-    const bedroomCount = this.numBedrooms.sort((a, b) => a - b)[0];
+    const bedroomCount = 1; // There website is insane. List houses for "1+" bedrooms. E.g. list everything they have
     const listings = await fetch(this.url, {
       "headers": {
         "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
@@ -43,8 +40,6 @@ class PanadewProperty extends WebDataSource
     if (listings.status !== 200)
       throw new Error('Failed to fetch Panadew Property website');
     const listingsResponse = await listings.text();
-    fs.writeFileSync('response.html', listingsResponse);
-
     const { JSDOM } = jsdom;
     const virtualConsole = new jsdom.VirtualConsole();
     virtualConsole.on('error', () => { /* do nothing */});
@@ -60,8 +55,6 @@ class PanadewProperty extends WebDataSource
       const leaseAndBedrooms = houseCard.querySelector(this.selectors.houseCardLeaseStart).innerHTML.trim().split('\n');
       const leaseStart = leaseAndBedrooms[1];
       const bedrooms = Number(leaseAndBedrooms[0].replace(/\D+/g, ''));
-      if (!this.numBedrooms.includes(bedrooms))
-        continue;
       const price = houseCard.querySelector(this.selectors.houseCardPrice).innerHTML.trim();
       const link = houseCard.querySelector(this.selectors.houseCardLink).href;
       const dataEntry = new DataEntry({
@@ -74,7 +67,6 @@ class PanadewProperty extends WebDataSource
       });
       dataEntries.push(dataEntry);
       }
-    console.log(`Found ${dataEntries.length} candidates`);
     return dataEntries;
   }
 }

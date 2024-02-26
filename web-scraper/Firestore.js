@@ -1,5 +1,6 @@
 const admin = require('firebase-admin');
 const { getFirestore } = require('firebase-admin/firestore');
+const { computeSHA256Hash } = require('./utils');
 
 class Firestore
 {
@@ -7,6 +8,7 @@ class Firestore
   {
     this.db = {};
     this.hashes = [];
+    this.init();
   }
 
   /**
@@ -19,34 +21,52 @@ class Firestore
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccount)
     });
-    const db = getFirestore();
+    this.db = getFirestore();
+    this.db.settings({ ignoreUndefinedProperties: true })
   }
 
   /**
    * Only write the document reference to Firestore if it does not exist.
-   * @param {string} entryHash The hash of the document to write
-   * @returns {boolean} Returns true if the document was written, false otherwise
+   * @param {object} dataEntry The dataEntry of the listing to write
+   * @returns {object} An object with the form { written: true|false, reason: '' }
    */
-  async writeIfNotExist(entryHash, data)
+  async writeIfNotExist(dataEntry)
   {
-    const documentReference = this.db.collection('houses').doc(entryHash);
+    const hash = this.makeHash(dataEntry);
+    if (!this.isNewHash(hash))
+      return { written: false, reason: 'CACHE' };
+    const documentReference = this.db.collection('houses').doc(hash);
     const snapshot = await documentReference.get();
     if (snapshot.exists)
-      return false;
-    await documentReference.set(data);
-    return true;
+      return { written: false, reason: 'FIRESTORE' };
+    await documentReference.set(dataEntry.toObject());
+    return { written: true, reason: '' };
   }
 
   /**
-   * Returns true if the provided hash is not in the cache
-   * @param {string} hash The hash
-   * @returns {boolean} True if the hash is uniquie, otherwise false
+   * Check if the hash is in the cache and add it if it is not
+   * @param {string} hash 
+   * @returns {boolean} True if the hash is novel, false otherwise
    */
   isNewHash(hash)
   {
     if (this.hashes.find(h => h === hash))
       return false;
+    this.hashes.push(hash);
     return true;
+  }
+
+  /**
+   * Returns a hash of the provided dataEntry based on its price, beds, and address
+   * @param {object} dataEntry The DataEntry
+   * @returns {string} The hash
+   */
+  makeHash(dataEntry)
+  {
+    const unwrapToString = (value) => value ? value : '';
+    const hashString = unwrapToString(dataEntry.address) + unwrapToString(dataEntry.pricePerBed) + unwrapToString(dataEntry.numBedrooms);
+    const hash = computeSHA256Hash(hashString);
+    return hash;
   }
 }
 module.exports.Firestore = Firestore;
